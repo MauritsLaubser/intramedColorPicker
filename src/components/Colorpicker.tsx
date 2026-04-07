@@ -59,14 +59,62 @@ const toHex = ({ h, s, v }: HsvColor): string => {
   return `#${convert.hsv.hex(Math.round(h), Math.round(s), Math.round(v)).toUpperCase()}`;
 };
 
+const findLightTextPassCeilingValue = (
+  hue: number,
+  saturation: number,
+  minimumContrast: number,
+  lightTextColor: string,
+): number => {
+  let boundaryValue = 0;
+
+  for (let valueChannel = 0; valueChannel <= 100; valueChannel += 1) {
+    const candidateColor = toHex({
+      h: hue,
+      s: saturation,
+      v: valueChannel,
+    });
+    const contrast = getContrastRatio(candidateColor, lightTextColor);
+
+    if (contrast >= minimumContrast) {
+      boundaryValue = valueChannel;
+    }
+  }
+
+  return boundaryValue;
+};
+
+const findDarkTextPassFloorValue = (
+  hue: number,
+  saturation: number,
+  minimumContrast: number,
+  darkTextColor: string,
+): number => {
+  let boundaryValue = 100;
+
+  for (let valueChannel = 0; valueChannel <= 100; valueChannel += 1) {
+    const candidateColor = toHex({
+      h: hue,
+      s: saturation,
+      v: valueChannel,
+    });
+    const contrast = getContrastRatio(candidateColor, darkTextColor);
+
+    if (contrast >= minimumContrast) {
+      boundaryValue = valueChannel;
+      break;
+    }
+  }
+
+  return boundaryValue;
+};
+
 const findTextFlipBoundaryValue = (
   hue: number,
   saturation: number,
   darkTextColor: string,
-  getTextColor: (backgroundColor: string) => string,
+  resolveTextColor: (backgroundColor: string) => string,
 ): number => {
-  // If dark text never wins for this saturation, keep the boundary above the box
-  // so the curve stays at the top edge instead of snapping to the bottom.
+  // Keep boundary at the top edge when a dark-text region is not present.
   let boundaryValue = 100;
 
   for (let valueChannel = 0; valueChannel <= 100; valueChannel += 1) {
@@ -76,7 +124,7 @@ const findTextFlipBoundaryValue = (
       v: valueChannel,
     });
 
-    if (getTextColor(candidateColor) === darkTextColor) {
+    if (resolveTextColor(candidateColor) === darkTextColor) {
       boundaryValue = valueChannel;
       break;
     }
@@ -133,32 +181,58 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
   const requiredContrast = accessibilityLevel === "AA" ? 4.5 : 7;
   const isAccessible = contrastRatio >= requiredContrast;
   const darkTextColor = theme.palette.grey[900];
-  const textFlipBoundary = useMemo(() => {
-    const getTextColor = (backgroundColor: string) =>
+  const lightTextColor = theme.palette.common.white;
+  const overlayBoundaries = useMemo(() => {
+    const resolveTextColor = (backgroundColor: string) =>
       getTextColorForBackgroundColor(theme, backgroundColor);
-    const points: Array<{ x: number; y: number }> = [];
+    const lightTextCeilingPoints: Array<{ x: number; y: number }> = [];
+    const darkTextFloorPoints: Array<{ x: number; y: number }> = [];
+    const textFlipPoints: Array<{ x: number; y: number }> = [];
 
     for (let saturation = 0; saturation <= 100; saturation += 2) {
-      const boundaryValue = findTextFlipBoundaryValue(
+      const lightTextCeilingValue = findLightTextPassCeilingValue(
+        hsvColor.h,
+        saturation,
+        requiredContrast,
+        lightTextColor,
+      );
+      lightTextCeilingPoints.push({
+        x: saturation,
+        y: 100 - lightTextCeilingValue,
+      });
+
+      const darkTextFloorValue = findDarkTextPassFloorValue(
+        hsvColor.h,
+        saturation,
+        requiredContrast,
+        darkTextColor,
+      );
+      darkTextFloorPoints.push({ x: saturation, y: 100 - darkTextFloorValue });
+
+      const textFlipBoundaryValue = findTextFlipBoundaryValue(
         hsvColor.h,
         saturation,
         darkTextColor,
-        getTextColor,
+        resolveTextColor,
       );
-      points.push({ x: saturation, y: 100 - boundaryValue });
+      textFlipPoints.push({ x: saturation, y: 100 - textFlipBoundaryValue });
     }
 
-    const path = points
-      .map((point, index) => {
-        const command = index === 0 ? "M" : "L";
-        return `${command}${point.x} ${point.y}`;
-      })
-      .join(" ");
+    const toPath = (points: Array<{ x: number; y: number }>) => {
+      return points
+        .map((point, index) => {
+          const command = index === 0 ? "M" : "L";
+          return `${command}${point.x} ${point.y}`;
+        })
+        .join(" ");
+    };
 
     return {
-      path,
+      selectedLightTextPath: toPath(lightTextCeilingPoints),
+      selectedDarkTextPath: toPath(darkTextFloorPoints),
+      textFlipPath: toPath(textFlipPoints),
     };
-  }, [darkTextColor, hsvColor.h, theme]);
+  }, [darkTextColor, hsvColor.h, lightTextColor, requiredContrast, theme]);
 
   const setAndPublishColor = (nextHsvColor: HsvColor) => {
     hsvColorRef.current = nextHsvColor;
@@ -326,11 +400,25 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
               preserveAspectRatio="none"
             >
               <path
-                d={textFlipBoundary.path}
+                d={overlayBoundaries.selectedLightTextPath}
                 fill="none"
-                stroke="rgba(255,255,255,0.95)"
-                strokeWidth="0.8"
+                stroke="rgba(56, 142, 60, 0.95)"
+                strokeWidth="1"
                 strokeDasharray="2 1.6"
+              />
+              <path
+                d={overlayBoundaries.selectedDarkTextPath}
+                fill="none"
+                stroke="rgba(56, 142, 60, 0.95)"
+                strokeWidth="1"
+                strokeDasharray="5 2"
+              />
+              <path
+                d={overlayBoundaries.textFlipPath}
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.95)"
+                strokeWidth="1"
+                strokeDasharray="4 2"
               />
             </svg>
           </Box>
