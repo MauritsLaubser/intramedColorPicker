@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { getContrastRatio } from "@mui/material/styles";
 import {
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   useEffect,
   useMemo,
@@ -295,6 +296,51 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
     globalThis.addEventListener("mouseup", stopTracking);
   };
 
+  const handleSaturationAreaKeyDown = (
+    event: ReactKeyboardEvent<HTMLDivElement>,
+  ) => {
+    const step = event.shiftKey ? 5 : 1;
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setAndPublishColor({
+        h: hsvColorRef.current.h,
+        s: clamp(hsvColorRef.current.s - step, 0, 100),
+        v: hsvColorRef.current.v,
+      });
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setAndPublishColor({
+        h: hsvColorRef.current.h,
+        s: clamp(hsvColorRef.current.s + step, 0, 100),
+        v: hsvColorRef.current.v,
+      });
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setAndPublishColor({
+        h: hsvColorRef.current.h,
+        s: hsvColorRef.current.s,
+        v: clamp(hsvColorRef.current.v + step, 0, 100),
+      });
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setAndPublishColor({
+        h: hsvColorRef.current.h,
+        s: hsvColorRef.current.s,
+        v: clamp(hsvColorRef.current.v - step, 0, 100),
+      });
+    }
+  };
+
   const handleHexInputChange = (nextInput: string) => {
     setHexInput(nextInput);
 
@@ -373,13 +419,21 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
         </Stack>
         <Box
           ref={saturationAreaRef}
+          tabIndex={0}
+          role="application"
+          aria-label="Saturation and brightness selection"
           onMouseDown={handleSaturationAreaMouseDown}
+          onKeyDown={handleSaturationAreaKeyDown}
           sx={{
             cursor: "crosshair",
             position: "relative",
             borderRadius: 1.5,
             height: 280,
             aspectRatio: "1/1",
+            outline: "none",
+            "&:focus-visible": {
+              boxShadow: `0 0 0 3px ${theme.palette.primary.light}`,
+            },
             background: `
               linear-gradient(to top, #000, transparent),
               linear-gradient(to right, #fff, hsl(${hsvColor.h}, 100%, 50%))
