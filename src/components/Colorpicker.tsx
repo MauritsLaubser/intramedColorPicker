@@ -404,21 +404,21 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
                 fill="none"
                 stroke="rgba(56, 142, 60, 0.95)"
                 strokeWidth="1"
-                strokeDasharray="2 1.6"
+                strokeDasharray="4 1"
               />
               <path
                 d={overlayBoundaries.selectedDarkTextPath}
                 fill="none"
                 stroke="rgba(56, 142, 60, 0.95)"
                 strokeWidth="1"
-                strokeDasharray="5 2"
+                strokeDasharray="4 1"
               />
               <path
                 d={overlayBoundaries.textFlipPath}
                 fill="none"
                 stroke="rgba(255, 255, 255, 0.95)"
                 strokeWidth="1"
-                strokeDasharray="4 2"
+                strokeDasharray="4 1"
               />
             </svg>
           </Box>
