@@ -95,34 +95,3 @@ export const adjustBackgroundColor = (
 
   return toHexColor(adjustedColor);
 };
-
-export const findClosestBackgroundColorForTextFlip = (
-  theme: Theme,
-  backgroundColor: string,
-): string => {
-  const currentTextColor = getTextColorForBackgroundColor(
-    theme,
-    backgroundColor,
-  );
-
-  for (let step = 1; step <= 10; step += 1) {
-    const amount = step / 10;
-
-    for (const mode of ["lighten", "darken"] as const) {
-      const candidateColor = adjustBackgroundColor(
-        backgroundColor,
-        mode,
-        amount,
-      );
-
-      if (
-        getTextColorForBackgroundColor(theme, candidateColor) !==
-        currentTextColor
-      ) {
-        return candidateColor;
-      }
-    }
-  }
-
-  return backgroundColor;
-};

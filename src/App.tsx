@@ -8,7 +8,6 @@ import {
   useTheme,
 } from "@mui/material";
 import { Chip } from "./components/Chip";
-import { ColorAdjustmentControls } from "./components/ColorAdjustmentControls";
 import type { ColorVariant } from "./colors/variants";
 import {
   adjustBackgroundColor,
@@ -111,11 +110,6 @@ function App() {
                   onChange={(event) => setChipLabel(event.target.value)}
                 />
                 <ColorPicker value={chipBackground} onChange={setColorInput} />
-
-                <ColorAdjustmentControls
-                  color={chipBackground}
-                  onChange={setColorInput}
-                />
 
                 <Stack direction="row" flexWrap="wrap" gap={1}>
                   {presetColors.map((presetColor) => {
